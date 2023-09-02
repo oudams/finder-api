@@ -63,12 +63,13 @@ const cacheRequest = new HttpRequest({
   },
   method: "GET",
   protocol: "rediss:",
-  port: "6379",
+  port: 6379,
   headers: {
-    host: "master.eg-test-redis-test.puc1sv.apse2.cache.amazonaws.com",
+    host: process.env.CACHE_ENDPOINT
   },
-  hostname: "master.eg-test-redis-test.puc1sv.apse2.cache.amazonaws.com",
+  hostname: process.env.CACHE_ENDPOINT,
 });
+
 const presigningOptions = {
   expiresIn: 900,
   signingDate: new Date(),
@@ -81,30 +82,25 @@ logger.info("URI==:")
 console.log("PRESIGNED URL: ", formatUrl(signedURI));
 logger.info("++================")
 console.log(signedURI.query)
-logger.info("+++================")
-console.log(signedURI.query['X-Amz-Credential'])
 
-// const redis = new Redis("rediss://testuser:mstdammstdammstdam@master.eg-test-redis-test.puc1sv.apse2.cache.amazonaws.com:6380");
-const redis = new Redis("rediss://master.eg-test-redis-test.puc1sv.apse2.cache.amazonaws.com:6379", {
+console.log("===USING PASSWORD===")
+const redis = new Redis(`rediss://${process.env.CACHE_ENDPOINT}:6379`, {
   username: 'testuser',
   password: 'mstdammstdammstdam'
 });
 
 await redis.set("mykey", "NORMAL-user-inserted-value");
-console.log("===============")
 logger.info(await redis.get("mykey"))
 
+console.log("===USING IAM AUTH WITH IOREDIS ===")
 const redis2 = new Redis(formatUrl(signedURI));
-//
 await redis2.set("mykey1", "iam-userinserted-value");
-console.log("=============== IAM aUTH with IORedis")
 logger.info(await redis2.get("mykey1"))
-//
+
+console.log("===USING IAM AUTH WITH OFFICIAL REDIS CLIENT ===")
 const redis3 =await createClient({
   url: formatUrl(signedURI)
 })
-
 redis3.connect();
 await redis3.set('key', '1');
-console.log("=============== IAM aUTH with Redis Client")
 console.log("REDIS creatClient ", await redis3.get("key") )
